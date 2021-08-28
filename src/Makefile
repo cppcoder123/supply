@@ -16,6 +16,7 @@ OBJECT_LIST = \
   feedback.o \
   gui.o \
   led.o \
+  poti.o \
   power.o \
   ring.o \
   rotor.o \

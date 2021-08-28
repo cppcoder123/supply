@@ -11,6 +11,10 @@
 #define CLK_PORT PORTA
 #define IN_PORT PORTA
 
+#define CS_DDR DDRB
+#define CLK_DDR DDRA
+#define IN_DDR DDRA
+
 #define DECODE_REG 0x9
 /* no decode, plain values */
 #define DECODE_NORMAL 0
@@ -80,6 +84,12 @@ void led_display (struct led_t *chip, uint8_t *data)
 
 void led_init (struct led_t *chip)
 {
+  /* configure our outputs first */
+  CS_DDR |= (1 << chip->cs);
+  CLK_DDR |= (1 << chip->clk);
+  IN_DDR |= (1 << chip->in);
+
+  /* send init commands to the max7219 */
   write (chip, DECODE_REG, DECODE_NORMAL);
   write (chip, INTENSITY_REG, INTENSITY_MAX);
   write (chip, SCAN_REG, SCAN_ALL);

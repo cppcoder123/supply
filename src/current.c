@@ -61,7 +61,9 @@ void current_value (uint8_t high, uint8_t low)
    * 2. shift high to the left 7 times
    * 3. or 1. & 2.
    */
-  gui_update (PARAM_CURRENT, (high << 7) | (low >> 1));
+  const uint8_t new_current = (high << 7) | (low >> 1);
+  if (new_current != current)
+    gui_update (PARAM_CURRENT, current = new_current);
 }
 
 void current_init ()
