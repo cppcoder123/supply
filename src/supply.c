@@ -11,7 +11,7 @@
 #include "debug.h"
 #include "fan.h"
 #include "gui.h"
-#include "poti.h"
+#include "power.h"
 #include "rotor.h"
 #include "shutdown.h"
 #include "twi.h"
@@ -36,15 +36,15 @@ static void init ()
   current_init ();
   debug_init ();
   fan_init ();
-  poti_init ();
   shutdown_init ();
   voltage_init ();
 
   adc_init ();
   counter_init ();
   rotor_init ();
-  twi_init ();                  /* twi before watch */
+  twi_init ();                  /* twi before watch & power */
 
+  power_init ();
   watch_init ();
 }
 

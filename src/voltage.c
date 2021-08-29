@@ -13,10 +13,12 @@
 
 static uint8_t voltage = 0;
 
+static struct poti_t poti;
+
 static void change (uint8_t desired_voltage)
 {
   /* resistor range is 0-99, so divide desired voltage by 2 */
-  poti_tweak (desired_voltage / 2);
+  poti_tweak (&poti, desired_voltage / 2);
 }
 
 void voltage_update (uint8_t *param, uint8_t update_id)
@@ -57,6 +59,11 @@ void voltage_value (uint8_t high, uint8_t low)
 void voltage_init ()
 {
   voltage = 0;
+
+  poti.cs = 0;
+  poti.inc = 1;
+  poti.ud = 2;
+  poti_init (&poti);
 
   gui_update (PARAM_VOLTAGE, voltage);
 }

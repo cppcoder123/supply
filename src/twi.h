@@ -27,7 +27,8 @@ enum {                          /* read/write status */
 };
 
 enum {                          /* slave ids */
-      TWI_ID_RTC,
+      TWI_ID_POWER,
+      TWI_ID_WATCH,
       TWI_ID_SIZE,              /* keep last ! */
 };
 

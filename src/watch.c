@@ -10,7 +10,7 @@
 #include "twi.h"
 #include "watch.h"
 
-#define RTC_ADDRESS 0x68
+#define TWI_ADDRESS 0x68
 
 #define REG_CONTROL 0x0e
 #define REG_ENABLE REG_CONTROL
@@ -218,12 +218,12 @@ static void read_callback (uint8_t tag, uint8_t status, uint8_t len,
 
 /* void watch_enable () */
 /* { */
-/*   twi_write_byte (TWI_ID_RTC, 0, REG_ENABLE, REG_VALUE_ENABLE); */
+/*   twi_write_byte (TWI_ID_WATCH, 0, REG_ENABLE, REG_VALUE_ENABLE); */
 /* } */
 
 /* void watch_disable () */
 /* { */
-/*   twi_write_byte (TWI_ID_RTC, 0, REG_ENABLE, REG_VALUE_DISABLE); */
+/*   twi_write_byte (TWI_ID_WATCH, 0, REG_ENABLE, REG_VALUE_DISABLE); */
 /* } */
 
 /* void watch_set (uint8_t hour, uint8_t minute, uint8_t second) */
@@ -234,7 +234,7 @@ static void read_callback (uint8_t tag, uint8_t status, uint8_t len,
 /*   epoch[BUFFER_MINUTE] = rtc (minute, RTC_TO, RTC_MINUTE);; */
 /*   epoch[BUFFER_HOUR] = rtc (hour, RTC_TO, RTC_HOUR); */
 
-/*   twi_write_array (TWI_ID_RTC, 0, BUFFER_SIZE, REG_SECOND, epoch); */
+/*   twi_write_array (TWI_ID_WATCH, 0, BUFFER_SIZE, REG_SECOND, epoch); */
 /* } */
 
 void watch_hour_update (uint8_t *param, uint8_t update_id)
@@ -269,16 +269,16 @@ void watch_init ()
   hour = 2;
   minute = 2;
 
-  twi_slave_r (TWI_ID_RTC, RTC_ADDRESS, &read_callback);
+  twi_slave_r (TWI_ID_WATCH, TWI_ADDRESS, &read_callback);
 
-  twi_write_byte (TWI_ID_RTC, 0, REG_ENABLE_32KHZ, REG_VALUE_DISABLE_32KHZ);
+  twi_write_byte (TWI_ID_WATCH, 0, REG_ENABLE_32KHZ, REG_VALUE_DISABLE_32KHZ);
 
   uint8_t epoch[BUFFER_SIZE];
   epoch[BUFFER_SECOND] = rtc (INITIAL_TIME, RTC_TO, RTC_SECOND);
   epoch[BUFFER_MINUTE] = rtc (INITIAL_TIME, RTC_TO, RTC_MINUTE);;
   epoch[BUFFER_HOUR] = rtc (INITIAL_TIME, RTC_TO, RTC_HOUR);
 
-  twi_write_array (TWI_ID_RTC, 0, BUFFER_SIZE, REG_SECOND, epoch);
+  twi_write_array (TWI_ID_WATCH, 0, BUFFER_SIZE, REG_SECOND, epoch);
 
  /* fixme: update gui with start value */
 }
@@ -289,8 +289,8 @@ ISR (INT2_vect)
   /*
    */
   /* fixme: we don't need seconds, hour & minute should be enough, remove it later */
-  twi_read_byte (TWI_ID_RTC, BUFFER_HOUR, REG_HOUR);
-  twi_read_byte (TWI_ID_RTC, BUFFER_MINUTE, REG_MINUTE);
-  twi_read_byte (TWI_ID_RTC, BUFFER_SECOND, REG_SECOND);
-  /* twi_read_array (TWI_ID_RTC, 0, BUFFER_SIZE, REG_SECOND); */
+  twi_read_byte (TWI_ID_WATCH, BUFFER_HOUR, REG_HOUR);
+  twi_read_byte (TWI_ID_WATCH, BUFFER_MINUTE, REG_MINUTE);
+  twi_read_byte (TWI_ID_WATCH, BUFFER_SECOND, REG_SECOND);
+  /* twi_read_array (TWI_ID_WATCH, 0, BUFFER_SIZE, REG_SECOND); */
 }

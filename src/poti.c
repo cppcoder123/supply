@@ -7,9 +7,9 @@
 #include "poti.h"
 
 #define OUT_PORT PORTC
-#define CS 0
-#define INC 1
-#define U_D 2
+/* #define CS 0 */
+/* #define INC 1 */
+/* #define U_D 2 */
 
 #define OUT_DDR DDRC
 
@@ -19,54 +19,69 @@
 #define KNOB_INITIAL 6
 #define KNOB_MAX 100
 
-#define SELECT (OUT_PORT &= ~(1 << CS))
-#define DESELECT (OUT_PORT |= (1 << CS))
 
-#define UP (OUT_PORT |= (1 << U_D))
-#define DOWN (OUT_PORT &= ~(1 << U_D))
+/* static uint8_t knob = KNOB_INITIAL; */
 
-static uint8_t knob = KNOB_INITIAL;
-
-static void cycle (uint8_t number)
+static void select (struct poti_t *poti)
 {
-  for (uint8_t i = 0; i < number; ++i) {
+  OUT_PORT &= ~(1 << poti->cs);
+}
+
+static void deselect (struct poti_t *poti)
+{
+  OUT_PORT |= (1 << poti->cs);
+}
+
+static void up (struct poti_t *poti)
+{
+  OUT_PORT |= (1 << poti->ud);
+}
+
+static void down (struct poti_t *poti)
+{
+  OUT_PORT &= ~(1 << poti->ud);
+}
+
+static void cycle (struct poti_t* poti, uint8_t delta)
+{
+  for (uint8_t i = 0; i < delta; ++i) {
     /* this pin is "negative edge triggered" , so */
-    OUT_PORT |= (1 << INC);
-    OUT_PORT &= ~(1 << INC);
+    OUT_PORT |= (1 << poti->inc);
+    OUT_PORT &= ~(1 << poti->inc);
   }
 }
 
-void poti_tweak (uint8_t new_knob)
+void poti_tweak (struct poti_t *poti, uint8_t position)
 {
-  if (new_knob > KNOB_MAX)
-    new_knob = KNOB_MAX;
+  if (position > KNOB_MAX)
+    position = KNOB_MAX;
 
-  if (new_knob == knob)
+  if (position == poti->position)
     return;
 
-  SELECT;
-  if (new_knob > knob) {
-    UP;
-    cycle (new_knob - knob);
+  select (poti);
+  if (position > poti->position) {
+    up (poti);
+    cycle (poti, position - poti->position);
   } else {
-    DOWN;
-    cycle (knob - new_knob);
+    down (poti);
+    cycle (poti, position - poti->position);
   }
-  DESELECT;
+  deselect (poti);
 
-  knob = new_knob;
+  poti->position = position;
 }
 
-void poti_init ()
+void poti_init (struct poti_t *poti)
 {
   /* configure outputs first */
-  OUT_DDR |= (1 << CS) | (1 << INC) | (1 << U_D);
+  OUT_DDR |= (1 << poti->cs) | (1 << poti->inc) | (1 << poti->ud);
 
-  SELECT;
-  DOWN;
-  cycle (100);
-  DESELECT;
+  select (poti);
+  down (poti);
+  cycle (poti, 100);
+  deselect (poti);
 
-  poti_tweak (KNOB_INITIAL);
+  poti_tweak (poti, KNOB_INITIAL);
   /* fixme */
 }
