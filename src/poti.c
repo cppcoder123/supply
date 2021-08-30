@@ -7,81 +7,87 @@
 #include "poti.h"
 
 #define OUT_PORT PORTC
-/* #define CS 0 */
-/* #define INC 1 */
-/* #define U_D 2 */
 
 #define OUT_DDR DDRC
 
-/*
- *
- */
-#define KNOB_INITIAL 6
-#define KNOB_MAX 100
+#define CS_0 0
+#define CS_1 1
 
+#define INC 2
+#define U_D 3
 
-/* static uint8_t knob = KNOB_INITIAL; */
+#define POSITION_MAX 100
+#define POSITION_MIN 0
 
-static void select (struct poti_t *poti)
+static uint8_t position[POTI_ID_SIZE];
+
+static void select (uint8_t cs)
 {
-  OUT_PORT &= ~(1 << poti->cs);
+  OUT_PORT &= ~(1 << cs);
 }
 
-static void deselect (struct poti_t *poti)
+static void deselect (uint8_t cs)
 {
-  OUT_PORT |= (1 << poti->cs);
+  OUT_PORT |= (1 << cs);
 }
 
-static void up (struct poti_t *poti)
+static void up ()
 {
-  OUT_PORT |= (1 << poti->ud);
+  OUT_PORT |= (1 << U_D);
 }
 
-static void down (struct poti_t *poti)
+static void down ()
 {
-  OUT_PORT &= ~(1 << poti->ud);
+  OUT_PORT &= ~(1 << U_D);
 }
 
-static void cycle (struct poti_t* poti, uint8_t delta)
+static void cycle (uint8_t delta)
 {
   for (uint8_t i = 0; i < delta; ++i) {
     /* this pin is "negative edge triggered" , so */
-    OUT_PORT |= (1 << poti->inc);
-    OUT_PORT &= ~(1 << poti->inc);
+    OUT_PORT |= (1 << INC);
+    OUT_PORT &= ~(1 << INC);
   }
 }
 
-void poti_tweak (struct poti_t *poti, uint8_t position)
+void poti_tweak (uint8_t poti_id, uint8_t new_position)
 {
-  if (position > KNOB_MAX)
-    position = KNOB_MAX;
+  if (new_position > POSITION_MAX)
+    new_position = POSITION_MAX;
 
-  if (position == poti->position)
+  if (position[poti_id] == new_position)
     return;
 
-  select (poti);
-  if (position > poti->position) {
-    up (poti);
-    cycle (poti, position - poti->position);
-  } else {
-    down (poti);
-    cycle (poti, position - poti->position);
-  }
-  deselect (poti);
+  const uint8_t id = (poti_id == POTI_ID_DCDC) ? CS_0 : CS_1;
 
-  poti->position = position;
+  select (id);
+  if (position[poti_id] > new_position) {
+    up ();
+    cycle (position[poti_id] - new_position);
+  } else {
+    down ();
+    cycle (position[poti_id] - new_position);
+  }
+  deselect (id);
+
+  position[poti_id] = new_position;
 }
 
-void poti_init (struct poti_t *poti)
+void poti_init ()
 {
   /* configure outputs first */
-  OUT_DDR |= (1 << poti->cs) | (1 << poti->inc) | (1 << poti->ud);
+  OUT_DDR |= (1 << CS_0) | (1 << CS_1) | (1 << INC) | (1 << U_D);
 
-  select (poti);
-  down (poti);
-  cycle (poti, 100);
-  deselect (poti);
+  select (CS_0);
+  down ();
+  cycle (100);
+  deselect (CS_0);
 
-  poti_tweak (poti, KNOB_INITIAL);
-  /* fixme */
+  select (CS_1);
+  down ();
+  cycle (100);
+  deselect (CS_1);
+
+  position[POTI_ID_DCDC] = 0;
+  position[POTI_ID_POWER] = 0;
 }

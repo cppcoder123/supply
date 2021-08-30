@@ -7,16 +7,18 @@
 
 #include <stdint.h>
 
-struct poti_t {
-  uint8_t cs;
-  uint8_t ud;                   /* up or down */
-  uint8_t inc;                  /* or dec */
-  /**/
-  uint8_t position;             /* current position */
+/* fixme: check */
+#define POTI_MAX 99
+/* fixme: check */
+#define POTI_MIN 0
+enum {
+  POTI_ID_DCDC,
+  POTI_ID_POWER,
+  POTI_ID_SIZE,                 /* keep it last */
 };
 
-void poti_tweak (struct poti_t *poti, uint8_t knob);
+void poti_tweak (uint8_t poti_id, uint8_t position);
 
-void poti_init (struct poti_t *poti);
+void poti_init ();
 
 #endif

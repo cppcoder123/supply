@@ -13,12 +13,9 @@ struct row_t {
 
   uint8_t info[ROW_INFO_SIZE];
   uint8_t info_size;            /* filled with data */
-
-  struct led_t chip;
 };
 
-void row_init (struct row_t *row, uint8_t param_id,
-               uint8_t cs, uint8_t clk, uint8_t in);
+void row_init (struct row_t *row, uint8_t param_id);
 
 /* fill the info by char from current place to the end */
 void row_fill (struct row_t *row, uint8_t byte);
@@ -26,8 +23,5 @@ void row_fill (struct row_t *row, uint8_t byte);
 void row_info_clear (struct row_t *row);
 
 void row_add (struct row_t *row, uint8_t byte);
-
-void row_render (struct row_t *row);
-
 
 #endif

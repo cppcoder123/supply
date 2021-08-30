@@ -11,12 +11,16 @@
 
 #include <stdint.h>
 
-#define LED_ROW_SIZE 8
-#define LED_DISPLAY_SIZE (LED_ROW_SIZE * 4)
+struct led_t
+{
+  uint8_t cs;
+  uint8_t clk;
+  uint8_t in;
+};
 
-/* data should have at least LED_DISPLAY_SIZE bytes ! */
-void led_display (uint8_t *data);
+void led_init (struct led_t *chip);
 
-void led_init ();
+/* data should have at least 8 bytes ! */
+void led_display (struct led_t *led, uint8_t *data);
 
 #endif

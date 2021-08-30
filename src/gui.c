@@ -91,10 +91,10 @@ static void display_init ()
   static struct row_t row_2;
   static struct row_t row_3;
 
-  row_init (&row_0, PARAM_VOLTAGE, 4, 1, 0);
-  row_init (&row_1, PARAM_CURRENT, 5, 3, 2);
-  row_init (&row_2, PARAM_WATCH, 6, 5, 4);
-  row_init (&row_3, PARAM_SHUTDOWN_ENABLE, 7, 7, 6);
+  row_init (&row_0, PARAM_VOLTAGE);
+  row_init (&row_1, PARAM_CURRENT);
+  row_init (&row_2, PARAM_WATCH);
+  row_init (&row_3, PARAM_SHUTDOWN_ENABLE);
 
   display[ROW_0] = &row_0;
   display[ROW_1] = &row_1;
@@ -409,8 +409,16 @@ static void render ()
   render_pointer ();
 
   /* send data to led chip */
-  for (uint8_t i = 0; i < ROW_SIZE; ++i)
-    row_render (display[i]);
+  uint8_t data[LED_DISPLAY_SIZE];
+  
+  for (uint8_t r = 0; r < ROW_SIZE; ++r) {
+    struct row_t *row = display[r];
+    for (uint8_t c = 0; c < LED_ROW_SIZE; ++c)
+      data[r * LED_ROW_SIZE + c] = row->info[c];
+  }
+
+  led_display (data);
+
 }
 
 void gui_update (uint8_t param_id, uint8_t value)
