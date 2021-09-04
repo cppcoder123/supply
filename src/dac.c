@@ -122,6 +122,8 @@ void dac_set (uint8_t new_high, uint8_t new_low)
     level = DAC_MAX;
   else if ((new_high == MIN_HIGH) && (new_low == MIN_LOW))
     level = DAC_MIN;
+  else
+    level = DAC_UNKNOWN;
 
   write (high = new_high, low = new_low);
 }
