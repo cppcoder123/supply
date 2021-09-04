@@ -4,6 +4,8 @@
  *
  */
  
+#include "bool.h"
+#include "clock.h"
 #include "current.h"
 #include "debug.h"
 #include "fan.h"
@@ -12,11 +14,8 @@
 #include "param.h"
 #include "rotor.h"
 #include "row.h"
-#include "shutdown.h"
-#include "text.h"
 #include "update.h"
 #include "voltage.h"
-#include "watch.h"
 
 /*
  * Define symbols we want to display
@@ -64,8 +63,8 @@
 #define INFO_SIZE 8
 
 /* rotor handling functionality related constants */
-#define KNOB_POINTER ROTOR_0
-#define KNOB_VALUE ROTOR_1
+#define KNOB_POINTER ROTOR_ID_0
+#define KNOB_VALUE ROTOR_ID_1
 
 /* display pointer */
 #define POINTER_MIN 1
@@ -93,8 +92,8 @@ static void display_init ()
 
   row_init (&row_0, PARAM_VOLTAGE);
   row_init (&row_1, PARAM_CURRENT);
-  row_init (&row_2, PARAM_WATCH);
-  row_init (&row_3, PARAM_SHUTDOWN_ENABLE);
+  row_init (&row_2, PARAM_CLOCK);
+  row_init (&row_3, PARAM_DISCONNECT);
 
   display[ROW_0] = &row_0;
   display[ROW_1] = &row_1;
@@ -182,23 +181,16 @@ static void param_update (uint8_t param_id, uint8_t update_id)
   case PARAM_FAN:
     fan_update (&param_list[param_id], update_id);
     break;
-  case PARAM_SHUTDOWN_ENABLE:
-    shutdown_enable_update (&param_list[param_id], update_id);
+  /* case PARAM_VOLTAGE: */
+  /*   voltage_update (&param_list[param_id], update_id); */
+  /*   break; */
+  case PARAM_CLOCK_HOUR:
+  case PARAM_DISCONNECT_HOUR:
+    clock_update (&param_list[param_id], param_id, update_id);
     break;
-  case PARAM_SHUTDOWN_HOUR:
-    shutdown_hour_update (&param_list[param_id], update_id);
-    break;
-  case PARAM_SHUTDOWN_MINUTE:
-    shutdown_minute_update (&param_list[param_id], update_id);
-    break;
-  case PARAM_VOLTAGE:
-    voltage_update (&param_list[param_id], update_id);
-    break;
-  case PARAM_WATCH_HOUR:
-    watch_hour_update (&param_list[param_id], update_id);
-    break;
-  case PARAM_WATCH_MINUTE:
-    watch_minute_update (&param_list[param_id], update_id);
+  case PARAM_CLOCK_MINUTE: 
+  case PARAM_DISCONNECT_MINUTE:
+    clock_update (&param_list[param_id], param_id, update_id);
     break;
   default:
     break;
@@ -226,36 +218,31 @@ static void render_label (uint8_t param, struct row_t *row)
   case PARAM_FAN:
     row_add (row, CHAR_F);
     break;
-  case PARAM_SHUTDOWN:
-    row_add (row, CHAR_S);
+  case PARAM_DISCONNECT:
+    row_add (row, CHAR_d);
     break;
-  case PARAM_SHUTDOWN_ENABLE:
-    row_add (row, CHAR_S);
-    row_add (row, CHAR_DASH);
-    row_add (row, CHAR_E);
-    break;
-  case PARAM_SHUTDOWN_HOUR:
-    row_add (row, CHAR_S);
+  case PARAM_DISCONNECT_HOUR:
+    row_add (row, CHAR_d);
     row_add (row, CHAR_DASH);
     row_add (row, CHAR_H);
     break;
-  case PARAM_SHUTDOWN_MINUTE:
-    row_add (row, CHAR_S);
+  case PARAM_DISCONNECT_MINUTE:
+    row_add (row, CHAR_d);
     row_add (row, CHAR_DASH);
-    row_add (row, CHAR_I);      /* mInute */
+    row_add (row, CHAR_I);
     break;
   case PARAM_VOLTAGE:
     row_add (row, CHAR_U);
     break;
-  case PARAM_WATCH:
+  case PARAM_CLOCK:
     row_add (row, CHAR_C);      /* clock */
     break;
-  case PARAM_WATCH_HOUR:
+  case PARAM_CLOCK_HOUR:
     row_add (row, CHAR_C);
     row_add (row, CHAR_DASH);
     row_add (row, CHAR_H);
     break;
-  case PARAM_WATCH_MINUTE:
+  case PARAM_CLOCK_MINUTE:
     row_add (row, CHAR_C);
     row_add (row, CHAR_DASH);
     row_add (row, CHAR_I);      /* mInute */
@@ -270,17 +257,17 @@ static void render_label (uint8_t param, struct row_t *row)
   row_add (row, 0);
 }
 
-static void render_text (uint8_t value, struct row_t *row)
-{
-  if (value == TEXT_OFF) {
-    row_add (row, CHAR_O);
-    row_add (row, CHAR_F);
-    row_add (row, CHAR_F);
-  } else {
-    row_add (row, CHAR_O);
-    row_add (row, CHAR_n);
-  }
-}
+/* static void render_text (uint8_t value, struct row_t *row) */
+/* { */
+/*   if (value == BOOL_OFF) { */
+/*     row_add (row, CHAR_O); */
+/*     row_add (row, CHAR_F); */
+/*     row_add (row, CHAR_F); */
+/*   } else { */
+/*     row_add (row, CHAR_O); */
+/*     row_add (row, CHAR_n); */
+/*   } */
+/* } */
 
 static uint8_t digit_image (uint8_t digit)
 {
@@ -357,7 +344,7 @@ static void render_uint8 (uint8_t value, struct row_t *row)
   row_add (row, digit_image (value));
 }
 
-static void render_watch (uint8_t hour, uint8_t minute, struct row_t *row)
+static void render_clock (uint8_t hour, uint8_t minute, struct row_t *row)
 {
   render_uint8 (hour, row);
   row_add (row, CHAR_DASH);
@@ -368,20 +355,18 @@ static void render_value (uint8_t param_id, struct row_t *row)
 {
   uint8_t value = param_list[param_id];
 
-  if (param_id != PARAM_SHUTDOWN_ENABLE)
-    render_text (value, row);
-  else if ((param_id == PARAM_CURRENT)
-           || (param_id == PARAM_VOLTAGE))
+  /* if (param_id == PARAM_SHUTDOWN_ENABLE) */
+  /*   render_text (value, row); */
+  /* else */
+  if ((param_id == PARAM_CURRENT)
+      || (param_id == PARAM_VOLTAGE))
     render_decimal (value, row);
-  else if (param_id == PARAM_SHUTDOWN) {
-    if (param_list[PARAM_SHUTDOWN_ENABLE] == TEXT_OFF)
-      row_fill (row, CHAR_DASH);
-    else
-      render_watch (param_list[PARAM_SHUTDOWN_HOUR],
-                    param_list[PARAM_SHUTDOWN_MINUTE], row);
-  } else if (param_id == PARAM_WATCH)
-    render_watch (param_list[PARAM_WATCH_HOUR],
-                  param_list[PARAM_WATCH_MINUTE], row);
+  else if (param_id == PARAM_CLOCK)
+    render_clock (param_list[PARAM_CLOCK_HOUR],
+                  param_list[PARAM_CLOCK_MINUTE], row);
+  else if (param_id == PARAM_DISCONNECT)
+    render_clock (param_list[PARAM_DISCONNECT_HOUR],
+                  param_list[PARAM_DISCONNECT_MINUTE], row);
   else
     render_uint8 (value, row);
 }
@@ -454,7 +439,7 @@ static void led_update (uint8_t led_id, uint8_t update_id)
 void gui_rotor (uint8_t knob_id, uint8_t action)
 {
   uint8_t param_id = param_current ();
-  uint8_t update_id = (action == ROTOR_CLOCKWISE) ? UPDATE_INC : UPDATE_DEC;
+  uint8_t update_id = (action == ROTOR_FORWARD) ? UPDATE_INC : UPDATE_DEC;
 
   if (knob_id == KNOB_POINTER) {
     if (param_id < PARAM_SIZE)
@@ -484,7 +469,7 @@ void gui_init ()
 
   /* content[ROW_0] = PARAM_VOLTAGE; */
   /* content[ROW_1] = PARAM_CURRENT; */
-  /* content[ROW_2] = PARAM_WATCH; */
+  /* content[ROW_2] = PARAM_CLOCK; */
   /* content[ROW_3] = PARAM_SHUTDOWN_ENABLE; */
 
   display_pointer = 1;

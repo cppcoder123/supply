@@ -10,46 +10,37 @@
 #include "gui.h"
 #include "rotor.h"
 
-/*all bits of K is used*/
-#define MASK_K (0xFF)
+/*0,1, & 3,4*/
+#define ALL_PINS ((1 << 0) | (1 << 1) | (1 << 3) | (1 << 4))
 
 /* a & b inputs */
 #define MASK_A (1 << 0)
 #define MASK_B (1 << 1)
 
-/*aux id to note interrupt source and put it into the queue*/
-/* enum { */
-/*       ID_J, */
-/*       ID_K, */
-/* }; */
+/* 
+ * one knob takes 2 bits, we are ignoring push, 
+ * and one wire beetwen rotor pins,
+ * see "ALL_PINS"
+*/
+#define STEP 3
 
-/* one knob takes 2 bits, we are ignoring push*/
-#define STEP 2
-
-/* static struct buf_t j_event_buf; */
-static struct buf_t k_event_buf;
+static struct buf_t event_buf;
 
 void rotor_init ()
 {
-  /* buf_init (&j_event_buf); */
-  buf_init (&k_event_buf);
-  /* old_event_j = 0; */
-  /* old_event_k = 0; */
+  buf_init (&event_buf);
 
-  /*Ports K(0-7) are inputs*/
-  DDRK &= ~MASK_K;
-  /* DDRJ &= ~MASK_J; */
+  /* configure as inputs*/
+  DDRD &= ~ALL_PINS;
 
-  /* enable 2nd and 3-rd series of pin change interrupts */
-  PCICR |= ((1 << PCIE1) | (1 << PCIE2));
+  /* enable 3-rd series of pin change interrupts */
+  PCICR |= (1 << PCIE2);
 
   /* set pin change mask to needed bits */
-  PCMSK1 |= (1 << 1) | (1 << 2);
-  PCMSK2 |= MASK_K;
+  PCMSK2 |= (1 << PCINT16) | (1 << PCINT17) | (1 << PCINT19) | (1 << PCINT20);
 
   /* enable internal pull-up resistors */
-  PORTK |= MASK_K;
-  /* PORTJ |= MASK_J; */
+  PORTD |= ALL_PINS;
 }
 
 static uint8_t handle_event (uint8_t modern, uint8_t old, uint8_t oldest)
@@ -58,18 +49,17 @@ static uint8_t handle_event (uint8_t modern, uint8_t old, uint8_t oldest)
   uint8_t mask_b = MASK_B;
   uint8_t mask_both = (mask_a | mask_b);
 
-  /* const uint8_t shift = (source == ID_J) ? ROTOR_4 : ROTOR_0; */
   uint8_t status = 0;
 
-  for (uint8_t i = ROTOR_0; i <= ROTOR_3; ++i) {
+  for (uint8_t i = ROTOR_ID_0; i <= ROTOR_ID_MAX; ++i) {
     if ((modern & mask_both) == 0) {
       if ((old & mask_a)
           && (oldest & mask_b)) {
-        gui_rotor (i, ROTOR_CLOCKWISE);
+        gui_rotor (i, ROTOR_FORWARD);
         status = 1;
       } else if ((old & mask_b)
                  && (oldest & mask_a)) {
-        gui_rotor (i, ROTOR_COUNTER_CLOCKWISE);
+        gui_rotor (i, ROTOR_BACKWARD);
         status = 1;
       }
     }
@@ -99,54 +89,28 @@ static void queue_drain (struct buf_t *buf, uint8_t drain_size)
     buf_byte_drain (buf, &dummy);
 }
 
-/* static void try_queue (struct buf_t *buf, uint8_t queue_id) */
-/* { */
-/*   /\* current, previous and before previous events*\/ */
-/*   uint8_t modern = 0, old = 0, oldest = 0; */
-/*   if (queue_head (buf, &modern, &old, &oldest)) { */
-/*       if (handle_event (queue_id, modern, old, oldest)) */
-/*         /\* */
-/*          * Succeded to drain  the queue, */
-/*          * and succeded to handle it, drain all 3 events */
-/*          *\/ */
-/*         queue_drain (buf, 3); */
-/*       else */
-/*         /\*         */
-/*          * Queue handling is failed => bouncing ? */
-/*          * Discard the oldest event */
-/*          *\/ */
-/*         queue_drain (buf, 1); */
-/*   } */
-/* } */
-
 void rotor_try ()
 {
   /* current, previous and before previous events*/
   uint8_t modern = 0, old = 0, oldest = 0;
-  if (queue_head (&k_event_buf, &modern, &old, &oldest)) {
+  if (queue_head (&event_buf, &modern, &old, &oldest)) {
       if (handle_event (modern, old, oldest))
         /*
          * Succeded to drain  the queue,
          * and succeded to handle it, drain all 3 events
          */
-        queue_drain (&k_event_buf, 3);
+        queue_drain (&event_buf, 3);
       else
         /*        
          * Queue handling is failed => bouncing ?
          * Discard the oldest event
          */
-        queue_drain (&k_event_buf, 1);
+        queue_drain (&event_buf, 1);
   }
 }
 
-/* ISR (PCINT1_vect) */
-/* { */
-/*   /\* debug_2 (DEBUG_ROTOR, 11, 11, ~(PINJ & MASK_J) & MASK_J); *\/ */
-/*   buf_byte_fill (&j_event_buf, ~(PINJ & MASK_J) & MASK_J); */
-/* } */
-
 ISR (PCINT2_vect)
 {
-  /* debug_2 (DEBUG_ROTOR, 22, 22, ~(PINK & MASK_K)); */
-  buf_byte_fill (&k_event_buf, ~(PINK & MASK_K));
+  /* debug_2 (DEBUG_ROTOR, 22, 22, ~(PIND & ALL_PINS)); */
+  buf_byte_fill (&event_buf, ~(PIND & ALL_PINS));
 }

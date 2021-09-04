@@ -4,21 +4,19 @@
 #ifndef SUPPLY_ROTOR_H
 #define SUPPLY_ROTOR_H
 
-/* #include <stdint.h> */
+enum {
+  ROTOR_ID_0,
+  ROTOR_ID_1,
+  ROTOR_ID_MAX,                 /* keep it last */
+};
+
+enum {                          /* actions */
+  ROTOR_FORWARD,                /* clockwise */
+  ROTOR_BACKWARD,               /* counter clockwise */
+};
 
 void rotor_init ();
 
 void rotor_try ();
-
-enum {
-  /* knob ids */
-  ROTOR_0,
-  ROTOR_1,
-  ROTOR_2,
-  ROTOR_3,
-  /* actions */
-  ROTOR_CLOCKWISE,
-  ROTOR_COUNTER_CLOCKWISE,
-};
 
 #endif

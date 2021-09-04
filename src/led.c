@@ -8,16 +8,16 @@
 #include "led.h"
 
 #define LOAD_PORT PORTB
-#define CLK_PORT PORTA
-#define IN_PORT PORTA
+#define CLK_PORT PORTB
+#define IN_PORT PORTD
 
-#define CS_DDR DDRB
-#define CLK_DDR DDRA
-#define IN_DDR DDRA
+#define LOAD_DDR DDRB
+#define CLK_DDR DDRB
+#define IN_DDR DDRD
 
-#define LOAD 4
+#define LOAD 0
 #define CLK 1
-#define DIN 0
+#define DIN 7
 
 #define COLUMN_SIZE 4
 
@@ -145,7 +145,7 @@ static void write_all (uint8_t reg, uint8_t value)
 void led_init ()
 {
   /* configure our outputs first */
-  CS_DDR |= (1 << LOAD);
+  LOAD_DDR |= (1 << LOAD);
   CLK_DDR |= (1 << CLK);
   IN_DDR |= (1 << DIN);
 

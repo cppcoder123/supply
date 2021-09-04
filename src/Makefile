@@ -8,26 +8,25 @@ TARGET_ELF = $(TARGET).elf
 OBJECT_LIST = \
   adc.o \
   buf.o \
-  counter.o \
+  clock.o \
   cron.o \
   current.o \
+  dac.o \
   debug.o \
   fan.o \
   feedback.o \
   gui.o \
   led.o \
-  poti.o \
-  power.o \
+  relay.o \
   ring.o \
   rotor.o \
   row.o \
-  shutdown.o \
   supply.o \
+  timer.o \
   twi.o \
-  voltage.o \
-  watch.o
+  voltage.o
 
-MCU = atmega2560
+MCU = atmega328
 
 CFLAGS_OPT = -I .. -mmcu=$(MCU) -Os -std=gnu99 -Wall 
 LDFLAGS_OPT = -mmcu=$(MCU)

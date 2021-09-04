@@ -17,10 +17,8 @@ void cron_try ();
 typedef void (*cron_callback) ();
 
 enum {
-  /* CRON_ID_AT, */
+  CRON_ID_ADC,
   CRON_ID_FAN,
-  /* CRON_ID_FLUSH, */
-  /* CRON_ID_HEARTBEAT, */
   CRON_ID_MAX,                /* Keep last */
 };
 

@@ -6,19 +6,19 @@
 #include <avr/io.h>
 
 #include "adc.h"
-#include "counter.h"
+#include "clock.h"
+#include "cron.h"
 #include "current.h"
+#include "dac.h"
 #include "debug.h"
 #include "fan.h"
 #include "gui.h"
 #include "led.h"
-#include "poti.h"
-#include "power.h"
+#include "relay.h"
 #include "rotor.h"
-#include "shutdown.h"
+#include "timer.h"
 #include "twi.h"
 #include "voltage.h"
-#include "watch.h"
 
 static void decelerate ()
 {
@@ -38,18 +38,18 @@ static void init ()
   current_init ();
   debug_init ();
   led_init ();
-  poti_init ();                 /* poti before fan & voltage */
-  shutdown_init ();
+  relay_init ();
 
+  cron_init ();                 /* cron before adc & fan */
   adc_init ();
-  counter_init ();
   fan_init ();
-  power_init ();
   rotor_init ();
-  twi_init ();                  /* twi before watch */
+  timer_init ();
+  twi_init ();                  /* twi before clock & dac */
   voltage_init ();
 
-  watch_init ();
+  clock_init ();
+  dac_init ();
 }
 
 int main ()
@@ -60,9 +60,10 @@ int main ()
 
   while (1) {
     adc_try ();
-    counter_try ();
+    cron_try ();
     fan_try ();
     rotor_try ();
+    timer_try ();
     twi_try ();
   }
 }

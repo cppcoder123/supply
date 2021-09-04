@@ -7,13 +7,13 @@
 #include <stdint.h>
 
 
-#include "counter.h"
 #include "cron.h"
+#include "dac.h"
 #include "fan.h"
 #include "feedback.h"
 #include "gui.h"
 #include "param.h"
-#include "power.h"
+#include "timer.h"
 #include "update.h"
 
 /* fixme, needed rev/min */
@@ -25,8 +25,8 @@
 /* ignore first measurements */
 #define FEEDBACK_IGNORE 3
 
-#define PWM_COUNTER COUNTER_3
-#define PWM_PRESCALER COUNTER_PRESCALER_1
+#define PWM_TIMER TIMER_0
+#define PWM_PRESCALER TIMER_01_PRESCALER_1
 #define PWM_FREQUENCY 160
 #define PWM_MAX PWM_FREQUENCY
 #define PWM_MIN 2
@@ -35,8 +35,8 @@
 #define PWM_DELTA_FINE 1
 #define PWM_DELTA_ROUGH 5
 
-#define METER_COUNTER COUNTER_5
-#define METER_PRESCALER COUNTER_PRESCALER_EXT_RISE
+#define METER_TIMER TIMER_1
+#define METER_PRESCALER TIMER_01_PRESCALER_EXT_RISE
 /* measure frequency, once per 5 sec?*/
 #define METER_FREQUENCY 250
 /* difference is too small => no correction is needed */
@@ -46,18 +46,19 @@
 
 #define FAN_ZERO 0
 
-#define PWM_BIT PORTE4
+#define PWM_BIT PORTD6
 /* #define PWM_PORT PORTE */
-#define PWM_DDR DDRE
+#define PWM_DDR DDRD
 /* negative polarity? it needs to be checked */
 #define PWM_POLARITY 0
 
-/* #define POWER_BIT PORTH1 */
-/* #define POWER_PORT PORTH */
-/* #define POWER_DDR DDRH */
-
 #define ON 1
 #define OFF 0
+
+/* limit current during the fan start */
+/* fixme: find the right value here */
+#define LIMIT_HIGH 0x05
+#define LIMIT_LOW 0x55
 
 /* #define FAN_INIT_DURATION 255 */
 
@@ -78,21 +79,6 @@ void fan_try ()
   feedback_try (&feedback);
 }
 
-/* static void power (uint8_t arg) */
-/* { */
-/*   if (arg == ON) { */
-/*     /\* configure power wire as output *\/ */
-/*     POWER_DDR |= (1 << POWER_BIT); */
-/*     /\* turn on power, assign 0 *\/ */
-/*     POWER_PORT &= ~(1 << POWER_BIT); */
-/*   } else {                      /\* off *\/ */
-/*     /\* turn off power, assign 1 *\/ */
-/*     POWER_PORT |= (1 << POWER_BIT); */
-/*     /\* configure power wire as input *\/ */
-/*     POWER_DDR &= ~(1 << POWER_BIT); */
-/*   } */
-/* } */
-
 static void pwm (uint8_t arg)
 {
   if (arg == ON) {
@@ -100,15 +86,15 @@ static void pwm (uint8_t arg)
     PWM_DDR |= (1 << PWM_BIT);
 
     pwm_value = PWM_START;
-    counter_register_write
-      (PWM_COUNTER, COUNTER_OUTPUT_COMPARE_A, PWM_FREQUENCY, FAN_ZERO);
-    counter_register_write
-      (PWM_COUNTER, COUNTER_OUTPUT_COMPARE_B, pwm_value, FAN_ZERO);
-    counter_pwm_enable (PWM_COUNTER, PWM_POLARITY);
-    counter_enable (PWM_COUNTER, PWM_PRESCALER);
+    timer_register_write
+      (PWM_TIMER, TIMER_OUTPUT_COMPARE_A, PWM_FREQUENCY, FAN_ZERO);
+    timer_register_write
+      (PWM_TIMER, TIMER_OUTPUT_COMPARE_B, pwm_value, FAN_ZERO);
+    timer_pwm_enable (PWM_TIMER, PWM_POLARITY);
+    timer_enable (PWM_TIMER, PWM_PRESCALER);
   } else {                      /* off */
-    counter_disable (PWM_COUNTER);
-    counter_pwm_disable (PWM_COUNTER, PWM_POLARITY);
+    timer_disable (PWM_TIMER);
+    timer_pwm_disable (PWM_TIMER, PWM_POLARITY);
     /* release pwm wire */
     PWM_DDR &= ~(1 << PWM_BIT);
   }
@@ -117,8 +103,8 @@ static void pwm (uint8_t arg)
 static void measure ()
 {
   uint8_t low = 0, high = 0;
-  counter_register_read (METER_COUNTER, COUNTER_VALUE, &low, &high);
-  counter_register_write (METER_COUNTER, COUNTER_VALUE, FAN_ZERO, FAN_ZERO);
+  timer_register_read (METER_TIMER, TIMER_VALUE, &low, &high);
+  timer_register_write (METER_TIMER, TIMER_VALUE, FAN_ZERO, FAN_ZERO);
 
   if ((low > 0x7F) && (high < 0xFF))
     ++high;
@@ -132,12 +118,12 @@ static void measure ()
 static void meter (uint8_t arg) /* frequency-meter */
 {
   if (arg == ON) {
-    counter_register_write (METER_COUNTER, COUNTER_VALUE, FAN_ZERO, FAN_ZERO);
-    counter_enable (METER_COUNTER, METER_PRESCALER);
+    timer_register_write (METER_TIMER, TIMER_VALUE, FAN_ZERO, FAN_ZERO);
+    timer_enable (METER_TIMER, METER_PRESCALER);
     cron_enable (CRON_ID_FAN, METER_FREQUENCY, &measure);
   } else {                      /* off */
     cron_disable (CRON_ID_FAN);
-    counter_disable (METER_COUNTER);
+    timer_disable (METER_TIMER);
   }
 }
 
@@ -160,9 +146,9 @@ static void control (uint8_t current)
   uint8_t meter_delta = (need_more > 0) ? speed - current : current - speed;
   uint8_t pwm_delta = get_pwm_delta (meter_delta);
 
-  if ((power_get () == POWER_LIMIT)
+  if ((dac_check (DAC_MIN) == 0)
       && (need_more == 0))
-    power_set (POWER_ON);
+    dac_rough_set (DAC_MIN);
 
   if (pwm_delta == FAN_ZERO) {
     /* debug_1 (DEBUG_FAN, 111, meter_delta); */
@@ -179,31 +165,9 @@ static void control (uint8_t current)
   /* fixme */
   /* pwm = 160; */
 
-  counter_register_write (PWM_COUNTER,
-                          COUNTER_OUTPUT_COMPARE_B, pwm_value, FAN_ZERO);
+  timer_register_write (PWM_TIMER,
+                          TIMER_OUTPUT_COMPARE_B, pwm_value, FAN_ZERO);
 }
-
-/* void fan_start () */
-/* { */
-/*   speed = 1; */
-
-/*   feedback_init (&feedback, FEEDBACK_TARGET, FEEDBACK_DELTA, */
-/*                  /\* FEEDBACK_DELAY, *\/ FEEDBACK_IGNORE, &control); */
-/*   power (ON); */
-/*   pwm (ON); */
-/*   meter (ON); */
-/*   /\* fixme *\/ */
-/* } */
-
-/* void fan_stop () */
-/* { */
-/*   /\* fixme *\/ */
-/*   meter (OFF); */
-/*   pwm (OFF); */
-/*   power (OFF); */
-
-/*   speed = 0; */
-/* } */
 
 void change_speed (uint8_t new_speed)
 {
@@ -219,11 +183,12 @@ void change_speed (uint8_t new_speed)
                    FEEDBACK_DELTA, FEEDBACK_IGNORE, &control);
     pwm (ON);
     meter (ON);
-    power_set (POWER_LIMIT);
+    dac_set (LIMIT_HIGH, LIMIT_LOW);
   } else if ((speed > 0) && (new_speed == 0)) {
     pwm (OFF);
     meter (OFF);
-    power_set (POWER_OFF);
+    /* max value disables fan power */
+    dac_rough_set (DAC_MAX);
   }
 
   speed = new_speed;
@@ -265,7 +230,4 @@ void fan_init ()
   speed = 0;
 
   gui_update (PARAM_FAN, speed);
-
-  /* fan_start (); */
-  /* at_schedule (AT_FAN, FAN_INIT_DURATION, &fan_stop); */
 }
