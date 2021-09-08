@@ -9,8 +9,8 @@
 #include "clock.h"
 #include "cron.h"
 #include "current.h"
-#include "dac.h"
 #include "debug.h"
+#include "drive.h"
 #include "fan.h"
 #include "gui.h"
 #include "led.h"
@@ -39,6 +39,7 @@ static void init ()
   debug_init ();
   led_init ();
   relay_init ();
+  drive_init ();
 
   cron_init ();                 /* cron before adc & fan */
   adc_init ();
@@ -49,7 +50,7 @@ static void init ()
   voltage_init ();
 
   clock_init ();
-  dac_init ();
+  /* dac_init (); */
 }
 
 int main ()

@@ -11,8 +11,8 @@ OBJECT_LIST = \
   clock.o \
   cron.o \
   current.o \
-  dac.o \
   debug.o \
+  drive.o \
   fan.o \
   feedback.o \
   gui.o \

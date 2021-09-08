@@ -8,7 +8,8 @@
 
 
 #include "cron.h"
-#include "dac.h"
+/* #include "dac.h" */
+#include "drive.h"
 #include "fan.h"
 #include "feedback.h"
 #include "gui.h"
@@ -146,9 +147,12 @@ static void control (uint8_t current)
   uint8_t meter_delta = (need_more > 0) ? speed - current : current - speed;
   uint8_t pwm_delta = get_pwm_delta (meter_delta);
 
-  if ((dac_check (DAC_MIN) == 0)
+  /* if ((dac_check (DAC_MIN) == 0) */
+  /*     && (need_more == 0)) */
+  /*   dac_rough_set (DAC_MIN); */
+  if ((drive_get () != DRIVE_OPEN)
       && (need_more == 0))
-    dac_rough_set (DAC_MIN);
+    drive_set (DRIVE_OPEN);
 
   if (pwm_delta == FAN_ZERO) {
     /* debug_1 (DEBUG_FAN, 111, meter_delta); */
@@ -183,12 +187,14 @@ void change_speed (uint8_t new_speed)
                    FEEDBACK_DELTA, FEEDBACK_IGNORE, &control);
     pwm (ON);
     meter (ON);
-    dac_set (LIMIT_HIGH, LIMIT_LOW);
+    /* dac_set (LIMIT_HIGH, LIMIT_LOW); */
+    drive_set (DRIVE_LIMIT);
   } else if ((speed > 0) && (new_speed == 0)) {
     pwm (OFF);
     meter (OFF);
     /* max value disables fan power */
-    dac_rough_set (DAC_MAX);
+    /* dac_rough_set (DAC_MAX); */
+    drive_set (DRIVE_CLOSE);
   }
 
   speed = new_speed;
