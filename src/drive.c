@@ -6,17 +6,21 @@
 
 #include "drive.h"
 
-#define HS_PORT PORTB
-#define HS_BIT 5
-#define HS_DDR DDRB
+#define LIMIT_HS_PORT PORTC
+#define LIMIT_HS_BIT 2
+#define LIMIT_HS_DDR DDRC
 
-#define LS_PORT PORTB
-#define LS_BIT 4
-#define LS_DDR DDRB
+#define LIMIT_LS_PORT PORTC
+#define LIMIT_LS_BIT 1
+#define LIMIT_LS_DDR DDRC
 
-#define OPEN_PORT PORTB
-#define OPEN_BIT 2
-#define OPEN_DDR DDRB
+#define OPEN_LS_PORT PORTB
+#define OPEN_LS_BIT 2
+#define OPEN_LS_DDR DDRB
+
+#define OPEN_HS_PORT PORTC
+#define OPEN_HS_BIT 0
+#define OPEN_HS_DDR DDRC
 
 static uint8_t level = DRIVE_CLOSE;
 
@@ -29,20 +33,20 @@ void drive_set (uint8_t new_level)
 
   switch (level) {
   case DRIVE_CLOSE:
-    OPEN_PORT &= ~(1 << OPEN_BIT);
-    HS_PORT |= (1 << HS_BIT);
-    LS_PORT &= ~(1 << LS_BIT);
+    OPEN_LS_PORT &= ~(1 << OPEN_LS_BIT);
+    LIMIT_HS_PORT |= (1 << LIMIT_HS_BIT);
+    LIMIT_LS_PORT &= ~(1 << LIMIT_LS_BIT);
     break;
   case DRIVE_LIMIT:
-    OPEN_PORT &= ~(1 << OPEN_BIT);
-    HS_PORT &= ~(1 << HS_BIT);
-    LS_PORT |= (1 << LS_BIT);
+    OPEN_LS_PORT &= ~(1 << OPEN_LS_BIT);
+    LIMIT_HS_PORT &= ~(1 << LIMIT_HS_BIT);
+    LIMIT_LS_PORT |= (1 << LIMIT_LS_BIT);
     break;
   case DRIVE_OPEN:
     /* close hs before setting open bit */
-    HS_PORT |= (1 << HS_BIT);
-    LS_PORT &= ~(1 << LS_BIT);
-    OPEN_PORT |= (1 << OPEN_BIT);
+    LIMIT_HS_PORT |= (1 << LIMIT_HS_BIT);
+    LIMIT_LS_PORT &= ~(1 << LIMIT_LS_BIT);
+    OPEN_LS_PORT |= (1 << OPEN_LS_BIT);
     break;
   default:
     break;
@@ -56,9 +60,9 @@ uint8_t drive_get ()
 
 void drive_init ()
 {
-  HS_DDR |= (1 << HS_BIT);
-  LS_DDR |= (1 << LS_BIT);
-  OPEN_DDR |= (1 << OPEN_BIT);
+  LIMIT_HS_DDR |= (1 << LIMIT_HS_BIT);
+  LIMIT_LS_DDR |= (1 << LIMIT_LS_BIT);
+  OPEN_LS_DDR |= (1 << OPEN_LS_BIT);
 
   drive_set (DRIVE_CLOSE);
 }

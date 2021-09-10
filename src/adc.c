@@ -86,16 +86,15 @@ static void select_channel (uint8_t channel_id)
    */
 
   /* reset selector */
-  ADMUX &= ~(1 << MUX0);
+  ADMUX &= ~((1 << MUX2) | (1 << MUX1) | (1 << MUX0));
 
   /* select input */
   switch (channel) {
-  case CHANNEL_CURRENT:
-    /* do nothing, we use 0 channel for current */
+  case CHANNEL_CURRENT:         /* adc 6 */
+    ADMUX |= (1 << MUX2) | (1 << MUX1);
     break;
-  case CHANNEL_VOLTAGE:
-    /* single ended, ADC1 input */
-    ADMUX |= (1 << MUX0);
+  case CHANNEL_VOLTAGE:         /* adc 7 */
+    ADMUX |= (1 << MUX2) | (1 << MUX1) | (1 << MUX0);
     break;
   default:
     break;
